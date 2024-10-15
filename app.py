@@ -20,6 +20,7 @@ def flatten_categories(data):
             if "products" in category_info:
                 for product_id, product_info in category_info["products"].items():
                     flattened_data.append({
+                        "category_id": category_id,           # Include the category ID
                         "category": full_name,
                         "product_id": product_id,
                         "product_name": product_info.get("title", ""),
