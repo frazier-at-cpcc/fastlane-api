@@ -1,50 +1,94 @@
-import json
+from flask import Flask, jsonify, request
 import requests
-from flask import Flask, jsonify
 
 app = Flask(__name__)
 
-# Fast Lane API endpoint
-FASTLANE_API_URL = "https://www.fastlaneus.com/api/ProductCategories"
+# Define the base URL for the external API
+FAST_LANE_API_URL = "https://www.fastlaneus.com/api/ProductCategories"
 
-def flatten_categories(data):
-    """Flatten nested product categories and products into a single list."""
-    flattened_data = []
-    
-    def recurse_categories(categories, parent_name=""):
-        for category_id, category_info in categories.items():
-            category_name = category_info.get("name", "")
-            full_name = f"{parent_name} > {category_name}" if parent_name else category_name
-            
-            # Check if there are products in this category
-            if "products" in category_info:
-                for product_id, product_info in category_info["products"].items():
-                    flattened_data.append({
-                        "category_id": category_id,           # Include the category ID
-                        "category": full_name,
-                        "product_id": product_id,
-                        "product_name": product_info.get("title", ""),
-                        "product_code": product_info.get("productcode", ""),
-                        "vendor_code": product_info.get("vendorcode", "")
-                    })
-            
-            # Recurse into sub-categories if they exist
-            if "productcategories" in category_info:
-                recurse_categories(category_info["productcategories"], full_name)
-
-    # Start recursion
-    recurse_categories(data["data"]["productcategories"])
-    return flattened_data
-
-@app.route('/api/product_categories', methods=['GET'])
-def get_product_categories():
-    response = requests.get(FASTLANE_API_URL)
+# Endpoint to retrieve all top-level categories
+@app.route('/categories', methods=['GET'])
+def get_categories():
+    response = requests.get(FAST_LANE_API_URL)
     if response.status_code == 200:
         data = response.json()
-        flattened_data = flatten_categories(data)
-        return jsonify(flattened_data)
-    else:
-        return jsonify({"error": "Failed to fetch data from Fast Lane API"}), response.status_code
+        categories = data.get("data", {}).get("productcategories", {})
+        # Only include top-level categories
+        return jsonify(categories)
+    return jsonify({'error': 'Failed to retrieve categories'}), response.status_code
+
+# Endpoint to retrieve a specific category and its subcategories
+@app.route('/categories/<int:id>', methods=['GET'])
+def get_category(id):
+    response = requests.get(FAST_LANE_API_URL)
+    if response.status_code == 200:
+        data = response.json()
+        category = data.get("data", {}).get("productcategories", {}).get(str(id))
+        if category:
+            return jsonify(category)
+        else:
+            return jsonify({'error': 'Category not found'}), 404
+    return jsonify({'error': 'Failed to retrieve categories'}), response.status_code
+
+# Endpoint to retrieve all products within a specific category or subcategory
+@app.route('/categories/<int:id>/products', methods=['GET'])
+def get_category_products(id):
+    response = requests.get(FAST_LANE_API_URL)
+    if response.status_code == 200:
+        data = response.json()
+        category = data.get("data", {}).get("productcategories", {}).get(str(id))
+        if category:
+            products = extract_products(category)
+            return jsonify(products)
+        else:
+            return jsonify({'error': 'Category not found'}), 404
+    return jsonify({'error': 'Failed to retrieve categories'}), response.status_code
+
+# Helper function to extract products from nested categories
+def extract_products(category):
+    products = category.get("products", {})
+    subcategories = category.get("productcategories", {})
+    for sub_id, subcategory in subcategories.items():
+        products.update(extract_products(subcategory))
+    return products
+
+# Endpoint to retrieve details about a specific product
+@app.route('/products/<int:productid>', methods=['GET'])
+def get_product(productid):
+    response = requests.get(FAST_LANE_API_URL)
+    if response.status_code == 200:
+        data = response.json()
+        products = extract_all_products(data.get("data", {}).get("productcategories", {}))
+        product = products.get(str(productid))
+        if product:
+            return jsonify(product)
+        else:
+            return jsonify({'error': 'Product not found'}), 404
+    return jsonify({'error': 'Failed to retrieve products'}), response.status_code
+
+# Helper function to extract all products
+def extract_all_products(categories):
+    products = {}
+    for id, category in categories.items():
+        products.update(category.get("products", {}))
+        subcategories = category.get("productcategories", {})
+        products.update(extract_all_products(subcategories))
+    return products
+
+# Endpoint to search products by title, product code, or vendor code
+@app.route('/products/search', methods=['GET'])
+def search_products():
+    query = request.args.get('query', '').lower()
+    response = requests.get(FAST_LANE_API_URL)
+    if response.status_code == 200:
+        data = response.json()
+        products = extract_all_products(data.get("data", {}).get("productcategories", {}))
+        filtered_products = {id: product for id, product in products.items()
+                             if query in product.get('title', '').lower() or
+                             query in product.get('productcode', '').lower() or
+                             query in product.get('vendorcode', '').lower()}
+        return jsonify(filtered_products)
+    return jsonify({'error': 'Failed to retrieve products'}), response.status_code
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(debug=True)
