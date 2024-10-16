@@ -138,6 +138,8 @@ def get_events_lookup():
         }
         events_data.append(event_info)
 
+    return jsonify(events_data)
+
 @app.route('/api/facilities', methods=['GET'])
 def get_facilities():
     url = 'https://www.fastlaneus.com/api/Facilities?country=US&limit=0'
@@ -169,6 +171,7 @@ def get_facilities():
         facilities_data.append(facility_info)
 
     return jsonify(facilities_data)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
