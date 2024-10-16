@@ -102,5 +102,42 @@ def get_products():
 
     return jsonify(products)
 
+@app.route('/api/events-lookup', methods=['GET'])
+def get_events_lookup():
+    url = 'https://www.fastlaneus.com/api/Events?country=US&limit=0'
+    response = requests.get(url)
+    
+    if response.status_code != 200:
+        return jsonify({'error': 'Failed to fetch events data'}), response.status_code
+    
+    data = response.json()
+    events_data = []
+
+    # Extract necessary event details
+    for event in data['data']:
+        event_info = {
+            'event_id': event.get('eventid'),
+            'product_id': event.get('productid'),
+            'facility_id': event.get('facilityid'),
+            'country_code': event.get('country'),
+            'language': event.get('language'),
+            'plm': event.get('plm'),
+            'product_version': event.get('productversion'),
+            'start_date': event.get('start'),
+            'start_time': event.get('starttime'),
+            'end_date': event.get('end'),
+            'end_time': event.get('endtime'),
+            'status': event.get('status'),
+            'timezone': event.get('timezone'),
+            'max_participants': event.get('maxparticipants'),
+            'free_seats': event.get('freeseats'),
+            'vlearning': event.get('vlearning'),
+            'reseller': event.get('reseller'),
+            'reseller_name': event.get('resellername'),
+            'last_changed': event.get('lastchanged')
+        }
+        events_data.append(event_info)
+
+    return jsonify(events_data)
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
