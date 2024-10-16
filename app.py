@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 import requests
 
 app = Flask(__name__)
@@ -171,6 +171,38 @@ def get_facilities():
         facilities_data.append(facility_info)
 
     return jsonify(facilities_data)
+
+@app.route('/api/j2m', methods=['POST'])
+def json_to_markdown():
+    # Parse JSON from the request
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'error': 'Invalid JSON data'}), 400
+
+    # Convert JSON to Markdown format
+    markdown_lines = []
+
+    def convert_to_markdown(data, indent=0):
+        for key, value in data.items():
+            if isinstance(value, dict):
+                markdown_lines.append(f"{'#' * (indent + 1)} {key}")
+                convert_to_markdown(value, indent + 1)
+            elif isinstance(value, list):
+                markdown_lines.append(f"{'#' * (indent + 1)} {key}")
+                for item in value:
+                    if isinstance(item, dict):
+                        convert_to_markdown(item, indent + 1)
+                    else:
+                        markdown_lines.append(f"{'  ' * indent}- {item}")
+            else:
+                markdown_lines.append(f"{'  ' * indent}- **{key}:** {value}")
+
+    convert_to_markdown(data)
+
+    # Join lines into a single markdown string
+    markdown = '\n'.join(markdown_lines)
+    return markdown, 200, {'Content-Type': 'text/plain'}
 
 
 if __name__ == '__main__':
