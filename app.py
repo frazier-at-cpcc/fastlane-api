@@ -68,5 +68,32 @@ def get_products():
 
     return jsonify(products)
 
+# Endpoint to correlate product IDs with category IDs
+@app.route('/api/product-category-lookup', methods=['GET'])
+def get_product_category_correlation():
+    url = 'https://www.fastlaneus.com/api/Products?limit=0'
+    response = requests.get(url)
+    
+    if response.status_code != 200:
+        return jsonify({'error': 'Failed to fetch products data'}), response.status_code
+    
+    data = response.json()
+    correlation_data = []
+
+    # Extract product ID and category ID for each product
+    for product in data['data']:
+        correlation_info = {
+            'product_id': product.get('productid'),
+            'category_id': product.get('categoryid')
+        }
+        correlation_data.append(correlation_info)
+
+    return jsonify(correlation_data)
+
+# Run the app
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
