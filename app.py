@@ -184,20 +184,27 @@ def json_to_markdown():
     markdown_lines = []
 
     def convert_to_markdown(data, indent=0):
-        for key, value in data.items():
-            if isinstance(value, dict):
-                markdown_lines.append(f"{'#' * (indent + 1)} {key}")
-                convert_to_markdown(value, indent + 1)
-            elif isinstance(value, list):
-                markdown_lines.append(f"{'#' * (indent + 1)} {key}")
-                for item in value:
-                    if isinstance(item, dict):
-                        convert_to_markdown(item, indent + 1)
-                    else:
-                        markdown_lines.append(f"{'  ' * indent}- {item}")
-            else:
-                markdown_lines.append(f"{'  ' * indent}- **{key}:** {value}")
+        # Check if the input is a dictionary
+        if isinstance(data, dict):
+            for key, value in data.items():
+                if isinstance(value, dict):
+                    markdown_lines.append(f"{'#' * (indent + 1)} {key}")
+                    convert_to_markdown(value, indent + 1)
+                elif isinstance(value, list):
+                    markdown_lines.append(f"{'#' * (indent + 1)} {key}")
+                    for item in value:
+                        if isinstance(item, dict):
+                            convert_to_markdown(item, indent + 1)
+                        else:
+                            markdown_lines.append(f"{'  ' * indent}- {item}")
+                else:
+                    markdown_lines.append(f"{'  ' * indent}- **{key}:** {value}")
+        # If the input is a list, iterate over each item
+        elif isinstance(data, list):
+            for item in data:
+                convert_to_markdown(item, indent)
 
+    # Call the conversion function
     convert_to_markdown(data)
 
     # Join lines into a single markdown string
