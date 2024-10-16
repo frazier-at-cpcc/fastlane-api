@@ -21,18 +21,19 @@ def get_product_categories():
     product_categories = []
 
     # Function to recursively extract product category details
-    def extract_categories(categories):
+    def extract_categories(categories, parent_id=None):
         for category in categories.values():
             category_info = {
                 'id': category.get('id'),
                 'name': category.get('name', ''),
-                'shortcut': category.get('shortcut', '')
+                'shortcut': category.get('shortcut', ''),
+                'parent_id': parent_id
             }
             product_categories.append(category_info)
 
             # If there are nested product categories, extract them too
             if 'productcategories' in category:
-                extract_categories(category['productcategories'])
+                extract_categories(category['productcategories'], parent_id=category['id'])
 
     # Start the extraction from the top-level categories
     if 'data' in data and 'productcategories' in data['data']:
