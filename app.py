@@ -138,6 +138,37 @@ def get_events_lookup():
         }
         events_data.append(event_info)
 
-    return jsonify(events_data)
+@app.route('/api/facilities', methods=['GET'])
+def get_facilities():
+    url = 'https://www.fastlaneus.com/api/Facilities?country=US&limit=0'
+    response = requests.get(url)
+    
+    if response.status_code != 200:
+        return jsonify({'error': 'Failed to fetch facilities data'}), response.status_code
+    
+    data = response.json()
+    facilities_data = []
+
+    # Extract necessary facility details
+    for facility in data['data']:
+        facility_info = {
+            'facility_id': facility.get('facilityid'),
+            'country_code': facility.get('country'),
+            'title': facility.get('title'),
+            'company': facility.get('company'),
+            'street': facility.get('street'),
+            'postcode': facility.get('postcode'),
+            'town': facility.get('town'),
+            'state_abbr': facility.get('stateabbr'),
+            'state_name': facility.get('statename'),
+            'metro_code': facility.get('metrocode'),
+            'metro_name': facility.get('metroname'),
+            'timezone': facility.get('timezone'),
+            'last_changed': facility.get('lastchanged')
+        }
+        facilities_data.append(facility_info)
+
+    return jsonify(facilities_data)
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
