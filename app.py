@@ -6,21 +6,15 @@ app = Flask(__name__)
 # Endpoint to fetch and format product categories
 @app.route('/api/product-categories', methods=['GET'])
 def get_product_categories():
-    # URL for fetching the product categories data
     url = 'https://www.fastlaneus.com/api/ProductCategories'
-    
-    # Make a GET request to fetch data from the URL
     response = requests.get(url)
     
-    # Check if the request was successful
     if response.status_code != 200:
-        return jsonify({'error': 'Failed to fetch data'}), response.status_code
+        return jsonify({'error': 'Failed to fetch product categories data'}), response.status_code
     
-    # Parse the JSON response
     data = response.json()
     product_categories = []
 
-    # Function to recursively extract product category details
     def extract_categories(categories, parent_id=None):
         for category in categories.values():
             category_info = {
@@ -30,17 +24,49 @@ def get_product_categories():
                 'parent_id': parent_id
             }
             product_categories.append(category_info)
-
-            # If there are nested product categories, extract them too
             if 'productcategories' in category:
                 extract_categories(category['productcategories'], parent_id=category['id'])
 
-    # Start the extraction from the top-level categories
     if 'data' in data and 'productcategories' in data['data']:
         extract_categories(data['data']['productcategories'])
 
-    # Return the extracted categories as JSON
     return jsonify(product_categories)
+
+# Endpoint to fetch and format course data
+@app.route('/api/products', methods=['GET'])
+def get_products():
+    url = 'https://www.fastlaneus.com/api/Products?limit=0'
+    response = requests.get(url)
+    
+    if response.status_code != 200:
+        return jsonify({'error': 'Failed to fetch products data'}), response.status_code
+    
+    data = response.json()
+    products = []
+
+    for product in data['data']:
+        product_info = {
+            'product_id': product.get('productid'),
+            'category_id': product.get('categoryid'),
+            'modality': product.get('modality'),
+            'active': product.get('active'),
+            'language': product.get('language'),
+            'title': product.get('title'),
+            'product_code': product.get('productcode'),
+            'vendor_code': product.get('vendorcode'),
+            'vendor_name': product.get('vendorname'),
+            'url': product.get('url'),
+            'objective': product.get('objective_plain'),
+            'essentials': product.get('essentials_plain'),
+            'audience': product.get('audience_plain'),
+            'outline': product.get('outline_plain'),
+            'summary': product.get('summary_plain'),
+            'course_duration': product.get('duration', {}).get('formatted'),
+            'last_changed': product.get('lastchanged')
+        }
+        products.append(product_info)
+
+    return jsonify(products)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
