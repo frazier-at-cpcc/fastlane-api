@@ -32,6 +32,40 @@ def get_product_categories():
 
     return jsonify(product_categories)
 
+# Endpoint to fetch product-category lookup
+@app.route('/api/product-category-lookup', methods=['GET'])
+def get_product_category_lookup():
+    url = 'https://www.fastlaneus.com/api/ProductCategories'
+    response = requests.get(url)
+    
+    if response.status_code != 200:
+        return jsonify({'error': 'Failed to fetch product categories data'}), response.status_code
+    
+    data = response.json()
+    product_category_lookup = []
+
+    def extract_product_category(categories):
+        for category in categories.values():
+            category_id = category.get('id')
+            
+            # Extract each product under the current category
+            if 'products' in category:
+                for product in category['products'].values():
+                    product_category_lookup.append({
+                        'product_id': product.get('productid'),
+                        'category_id': category_id
+                    })
+
+            # Recursively check nested categories
+            if 'productcategories' in category:
+                extract_product_category(category['productcategories'])
+
+    # Start the extraction from the top-level categories
+    if 'data' in data and 'productcategories' in data['data']:
+        extract_product_category(data['data']['productcategories'])
+
+    return jsonify(product_category_lookup)
+    
 # Endpoint to fetch and format course data
 @app.route('/api/products', methods=['GET'])
 def get_products():
@@ -67,28 +101,6 @@ def get_products():
         products.append(product_info)
 
     return jsonify(products)
-
-# Endpoint to correlate product IDs with category IDs
-@app.route('/api/product-category-lookup', methods=['GET'])
-def get_product_category_correlation():
-    url = 'https://www.fastlaneus.com/api/Products?limit=0'
-    response = requests.get(url)
-    
-    if response.status_code != 200:
-        return jsonify({'error': 'Failed to fetch products data'}), response.status_code
-    
-    data = response.json()
-    correlation_data = []
-
-    # Extract product ID and category ID for each product
-    for product in data['data']:
-        correlation_info = {
-            'product_id': product.get('productid'),
-            'category_id': product.get('categoryid')
-        }
-        correlation_data.append(correlation_info)
-
-    return jsonify(correlation_data)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
